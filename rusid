@@ -1,0 +1,124 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+local flying = false
+local flySpeed = 60
+local flyConnection
+
+local character
+local humanoid
+local rootPart
+
+local function setupCharacter(char)
+	character = char
+	humanoid = char:WaitForChild("Humanoid")
+	rootPart = char:WaitForChild("HumanoidRootPart")
+end
+
+setupCharacter(player.Character or player.CharacterAdded:Wait())
+
+player.CharacterAdded:Connect(function(char)
+	setupCharacter(char)
+	flying = false
+end)
+
+-- GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "FlyGui"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local onButton = Instance.new("TextButton")
+onButton.Name = "FlyOn"
+onButton.Size = UDim2.new(0, 120, 0, 45)
+onButton.Position = UDim2.new(0, 15, 0.4, 0)
+onButton.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
+onButton.TextColor3 = Color3.new(1, 1, 1)
+onButton.Text = "FLY ON"
+onButton.TextSize = 18
+onButton.Font = Enum.Font.GothamBold
+onButton.Parent = gui
+
+local offButton = Instance.new("TextButton")
+offButton.Name = "FlyOff"
+offButton.Size = UDim2.new(0, 120, 0, 45)
+offButton.Position = UDim2.new(0, 15, 0.4, 55)
+offButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+offButton.TextColor3 = Color3.new(1, 1, 1)
+offButton.Text = "FLY OFF"
+offButton.TextSize = 18
+offButton.Font = Enum.Font.GothamBold
+offButton.Parent = gui
+
+-- Aktifkan fly
+local function startFly()
+	if flying or not rootPart or not humanoid then
+		return
+	end
+
+	flying = true
+	humanoid.PlatformStand = true
+
+	flyConnection = RunService.RenderStepped:Connect(function()
+		if not flying or not rootPart or not rootPart.Parent then
+			return
+		end
+
+		local moveDirection = Vector3.zero
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+			moveDirection += camera.CFrame.LookVector
+		end
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+			moveDirection -= camera.CFrame.LookVector
+		end
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+			moveDirection += camera.CFrame.RightVector
+		end
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+			moveDirection -= camera.CFrame.RightVector
+		end
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+			moveDirection += Vector3.yAxis
+		end
+
+		if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+			moveDirection -= Vector3.yAxis
+		end
+
+		if moveDirection.Magnitude > 0 then
+			moveDirection = moveDirection.Unit * flySpeed
+		end
+
+		rootPart.AssemblyLinearVelocity = moveDirection
+	end)
+end
+
+-- Matikan fly
+local function stopFly()
+	flying = false
+
+	if flyConnection then
+		flyConnection:Disconnect()
+		flyConnection = nil
+	end
+
+	if humanoid then
+		humanoid.PlatformStand = false
+	end
+
+	if rootPart then
+		rootPart.AssemblyLinearVelocity = Vector3.zero
+	end
+end
+
+onButton.MouseButton1Click:Connect(startFly)
+offButton.MouseButton1Click:Connect(stopFly)
